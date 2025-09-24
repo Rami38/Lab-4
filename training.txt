@@ -1,0 +1,1 @@
+This is a sample training text file. It contains common English words and patterns that will help the program identify the most frequent letters. The quick brown fox jumps over the lazy dog. This sentence contains all letters of the alphabet.
