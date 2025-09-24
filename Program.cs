@@ -10,6 +10,10 @@ namespace Lab_4
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("Enter the training file location and name:");
+            string trainingFile = Console.ReadLine();
+            string readText = trainingFile.ReadAllText(trainingFile);
+
             int A = 'A';
             int Z = 'Z';
 
