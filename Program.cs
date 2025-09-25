@@ -11,10 +11,9 @@ namespace Lab_4
         {
             try
             {
-                
                 if (args.Length != 3)
                 {
-                    Console.WriteLine("UEnter the good number of parameters");
+                    Console.WriteLine("Usage: Lab_3.exe <training_file> <scrambled_file> <output_file>");
                     Console.WriteLine("Press enter to continue...");
                     Console.ReadLine();
                     return;
@@ -24,8 +23,7 @@ namespace Lab_4
                 string scrambledFile = args[1];
                 string outputFile = args[2];
 
-                
-                CaesarCypherProcessor processor = new CaesarCypherProcessor();
+                CaesarCipher processor = new CaesarCipher();
                 processor.ProcessFiles(trainingFile, scrambledFile, outputFile);
 
                 Console.WriteLine("Press enter to continue...");
@@ -40,143 +38,79 @@ namespace Lab_4
         }
     }
 
-    public class CaesarCypherProcessor
+    public class CaesarCipher
     {
         public void ProcessFiles(string trainingFile, string scrambledFile, string outputFile)
         {
-            
             Console.WriteLine($"Reading input file \"{trainingFile}\".");
-            string trainingText = ReadFile(trainingFile);
-            Console.WriteLine($"Length of input file is {CountLines(trainingText)} lines, and {trainingText.Length} characters.");
+            string trainingText = File.ReadAllText(trainingFile);
+            Console.WriteLine($"Length of input file is {trainingText.Split('\n').Length} lines, and {trainingText.Length} characters.");
 
-            var trainingFrequencies = AnalyzeCharacterFrequency(trainingText);
-            char mostFrequentTrainingChar = trainingFrequencies.First().Key;
-            int trainingCharCount = trainingFrequencies.First().Value;
+            char mostFrequentTraining = GetMostFrequentLetter(trainingText);
+            Console.WriteLine($"The most occurring character is {mostFrequentTraining}, occurring {trainingText.Count(c => char.ToLower(c) == char.ToLower(mostFrequentTraining))} times.");
 
-            
-            var topTwoTraining = trainingFrequencies.Take(2).ToList();
-            Console.WriteLine($"The two most occurring characters are {topTwoTraining[0].Key} and {topTwoTraining[1].Key}, " +
-                              $"occurring {topTwoTraining[0].Value} times and {topTwoTraining[1].Value} times.");
-
-            
             Console.WriteLine($"Reading the encrypted file \"{scrambledFile}\".");
-            string scrambledText = ReadFile(scrambledFile);
+            string scrambledText = File.ReadAllText(scrambledFile);
+            char mostFrequentScrambled = GetMostFrequentLetter(scrambledText);
+            int scrambledCount = scrambledText.Count(c => char.ToLower(c) == char.ToLower(mostFrequentScrambled));
+            Console.WriteLine($"The most occurring character is {mostFrequentScrambled}, occurring {scrambledCount} times.");
 
-            var scrambledFrequencies = AnalyzeCharacterFrequency(scrambledText);
-            char mostFrequentScrambledChar = scrambledFrequencies.First().Key;
-            int scrambledCharCount = scrambledFrequencies.First().Value;
+            int shift = (mostFrequentScrambled - mostFrequentTraining + 26) % 26;
+            Console.WriteLine($"A shift factor of {shift} has been determined.");
 
-            Console.WriteLine($"The most occurring character is {mostFrequentScrambledChar}, occurring {scrambledCharCount} times.");
+            string decryptedText = DecryptText(scrambledText, shift);
 
-            
-            int shiftFactor = CalculateShiftFactor(mostFrequentTrainingChar, mostFrequentScrambledChar);
-            Console.WriteLine($"A shift factor of {shiftFactor} has been determined.");
-
-            
-            string decryptedText = DecryptText(scrambledText, shiftFactor);
-
-            
             Console.WriteLine($"Writing output file now to \"{outputFile}\".");
-            WriteFile(outputFile, decryptedText);
+            File.WriteAllText(outputFile, decryptedText);
 
-            
-            Console.Write("Display the file? (y/n): ");
-            string response = Console.ReadLine()?.ToLower();
-
-            if (response == "y" || response == "yes")
+            Console.WriteLine("Display the file? (y/n)");
+            string response = Console.ReadLine();
+            if (response?.ToLower() == "y")
             {
-                Console.WriteLine("\nDecrypted Text:");
-                Console.WriteLine("================");
+                Console.WriteLine("Decrypted content:");
                 Console.WriteLine(decryptedText);
-                Console.WriteLine("================");
             }
         }
 
-        private string ReadFile(string filePath)
+        private char GetMostFrequentLetter(string text)
         {
-            if (!File.Exists(filePath))
-            {
-                throw new FileNotFoundException($"File not found: {filePath}");
-            }
+            var frequency = new Dictionary<char, int>();
 
-            return File.ReadAllText(filePath);
-        }
-
-        private void WriteFile(string filePath, string content)
-        {
-            File.WriteAllText(filePath, content);
-        }
-
-        private int CountLines(string text)
-        {
-            return text.Split('\n').Length;
-        }
-
-        private Dictionary<char, int> AnalyzeCharacterFrequency(string text)
-        {
-            Dictionary<char, int> frequency = new Dictionary<char, int>();
-
-            foreach (char c in text)
+            foreach (char c in text.ToLower())
             {
                 if (char.IsLetter(c))
                 {
-                    char lowerChar = char.ToLower(c);
-                    if (frequency.ContainsKey(lowerChar))
-                    {
-                        frequency[lowerChar]++;
-                    }
+                    if (frequency.ContainsKey(c))
+                        frequency[c]++;
                     else
-                    {
-                        frequency[lowerChar] = 1;
-                    }
+                        frequency[c] = 1;
                 }
             }
 
-            
-            return frequency.OrderByDescending(pair => pair.Value)
-                           .ToDictionary(pair => pair.Key, pair => pair.Value);
+            return frequency.OrderByDescending(kv => kv.Value).First().Key;
         }
 
-        private int CalculateShiftFactor(char trainingChar, char scrambledChar)
+        private string DecryptText(string text, int shift)
         {
-            
-            trainingChar = char.ToLower(trainingChar);
-            scrambledChar = char.ToLower(scrambledChar);
+            char[] result = new char[text.Length];
 
-            
-            int shift = (scrambledChar - trainingChar) % 26;
-
-            
-            if (shift < 0)
+            for (int i = 0; i < text.Length; i++)
             {
-                shift += 26;
-            }
-
-            return shift;
-        }
-
-        private string DecryptText(string encryptedText, int shiftFactor)
-        {
-            char[] decryptedChars = new char[encryptedText.Length];
-
-            for (int i = 0; i < encryptedText.Length; i++)
-            {
-                char c = encryptedText[i];
+                char c = text[i];
 
                 if (char.IsLetter(c))
                 {
                     char baseChar = char.IsUpper(c) ? 'A' : 'a';
-                    
-                    char decryptedChar = (char)(((c - baseChar - shiftFactor + 26) % 26) + baseChar);
-                    decryptedChars[i] = decryptedChar;
+                    char shifted = (char)(((c - baseChar - shift + 26) % 26) + baseChar);
+                    result[i] = shifted;
                 }
                 else
                 {
-                    decryptedChars[i] = c;
+                    result[i] = c;
                 }
             }
 
-            return new string(decryptedChars);
+            return new string(result);
         }
     }
 }
